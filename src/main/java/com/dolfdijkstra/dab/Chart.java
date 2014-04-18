@@ -28,7 +28,7 @@ public class Chart {
         }
 
         @Override
-        public int getRowIndex(Comparable key) {
+        public int getRowIndex(@SuppressWarnings("rawtypes") Comparable key) {
             return Integer.parseInt(key.toString());
         }
 
@@ -50,7 +50,7 @@ public class Chart {
         }
 
         @Override
-        public int getColumnIndex(Comparable key) {
+        public int getColumnIndex(@SuppressWarnings("rawtypes") Comparable key) {
             return 1;
         }
 
@@ -60,7 +60,7 @@ public class Chart {
         }
 
         @Override
-        public Number getValue(Comparable rowKey, Comparable columnKey) {
+        public Number getValue(@SuppressWarnings("rawtypes") Comparable rowKey, @SuppressWarnings("rawtypes") Comparable columnKey) {
             return stat.get(getRowIndex(rowKey)).getN();
         }
 

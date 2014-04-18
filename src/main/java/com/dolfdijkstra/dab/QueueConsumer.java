@@ -47,7 +47,7 @@ final class QueueConsumer implements Runnable {
                 Object[] line;
                 while ((line = queue.poll(25, TimeUnit.MILLISECONDS)) != null) {
                     col.addToStats(line);
-                    if (writer != null)
+                    if (writer != null && line.length > 1) //line.length==1 is http client error
                         writer.println(format(line));
                 }
             } catch (InterruptedException e) {

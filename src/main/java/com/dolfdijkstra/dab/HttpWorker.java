@@ -3,7 +3,6 @@ package com.dolfdijkstra.dab;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.http.Header;
@@ -13,45 +12,48 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.protocol.ClientContext;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.cookie.BrowserCompatSpec;
 import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.ExecutionContext;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpCoreContext;
 import org.apache.http.util.EntityUtils;
 
 public class HttpWorker implements Runnable {
-    private final HttpClient client;
-
+    private final CloseableHttpClient client;
+    private final HttpClientConnectionManager connectionManager;
     private final Condition condition;
 
     private final ResultsCollector results;
 
-    private final URI uri;
-
     private final int id;
     private long interval = 0;
     private final WorkerManager manager;
+
     private AtomicInteger active = new AtomicInteger();
 
     private final boolean verbose;
     private final long startTime;
+
+    private Script script;
 
     /**
      * @param manager
      * @param client
      * @param id identifier
      */
-    public HttpWorker(final WorkerManager manager, final HttpClient client, final int id) {
+    public HttpWorker(final WorkerManager manager, final CloseableHttpClient client,
+            HttpClientConnectionManager conmanager, final int id) {
         super();
         this.client = client;
+        this.connectionManager = conmanager;
         this.condition = manager.getCondition();
         this.results = manager.getResults();
-        this.uri = manager.getUri();
+        this.script = manager.getScript();
         this.id = id;
         this.manager = manager;
         this.interval = manager.getInterval();
@@ -65,19 +67,21 @@ public class HttpWorker implements Runnable {
         final HttpContext context = createContext();
 
         manager.startWorker(id);
-        final String url = uri.toASCIIString();
+        boolean stop = false;
         try {
-            while (condition.isValid()) {
+            while (condition.isValid() && stop == false) {
 
-                final HttpUriRequest request = new HttpGet(uri);
+                final HttpUriRequest request = script.next();
+                final URI uri = request.getURI();
+                final String url = uri.toASCIIString();
                 HttpEntity entity = null;
                 try {
                     final long t = System.nanoTime();
                     final long time = System.currentTimeMillis();
-                    active.incrementAndGet();
+                    int concurrent = active.incrementAndGet();
                     final HttpResponse response = client.execute(request, context);
-                    final HttpRequest req = (HttpRequest) context.getAttribute(ExecutionContext.HTTP_REQUEST);
-                    final HttpConnection conn = (HttpConnection) context.getAttribute(ExecutionContext.HTTP_CONNECTION);
+                    final HttpRequest req = (HttpRequest) context.getAttribute(HttpCoreContext.HTTP_REQUEST);
+                    final HttpConnection conn = (HttpConnection) context.getAttribute(HttpCoreContext.HTTP_CONNECTION);
                     final HttpConnectionMetrics metrics = conn.getMetrics();
 
                     if (verbose) {
@@ -93,19 +97,22 @@ public class HttpWorker implements Runnable {
                     // microseconds
 
                     results.collect(time, (time - startTime), elapsed, response.getStatusLine().getStatusCode(), bytes,
-                            id, active.decrementAndGet() + 1, sent, received, url);
+                            id, concurrent, sent, received, url);
                 } catch (final ClientProtocolException e) {
                     results.exeption(e, this, uri);
                     request.abort();
+                    stop=true;
                 } catch (final IOException e) {
                     results.exeption(e, this, uri);
                     request.abort();
+                    stop=true;
                 } finally {
                     try {
                         EntityUtils.consume(entity);
                     } catch (final IOException e) {
                         // ignore
                     }
+                    active.decrementAndGet();
                 }
                 try {
                     if (interval > 0) {
@@ -118,7 +125,13 @@ public class HttpWorker implements Runnable {
             }
         } finally {
             manager.finishWorker(id);
-            client.getConnectionManager().closeIdleConnections(-5, TimeUnit.SECONDS);
+            try {
+                client.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            connectionManager.shutdown();// .closeIdleConnections(-5,
+                                         // TimeUnit.SECONDS);
         }
 
     }
@@ -159,8 +172,8 @@ public class HttpWorker implements Runnable {
     private HttpContext createContext() {
         final BasicHttpContext context = new BasicHttpContext();
         final BasicCookieStore store = new BasicCookieStore();
-        context.setAttribute(ClientContext.COOKIE_STORE, store);
-        context.setAttribute(ClientContext.COOKIE_SPEC, new BrowserCompatSpec());
+        context.setAttribute(HttpClientContext.COOKIE_STORE, store);
+        context.setAttribute(HttpClientContext.COOKIE_SPEC, new BrowserCompatSpec());
         return context;
     }
 

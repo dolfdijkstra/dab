@@ -5,7 +5,6 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 
 import javax.imageio.ImageIO;
 
@@ -206,7 +205,7 @@ public class RRDChart {
         String[] images = new String[0];
         int x = 0;
         int y = 0;
-        int last_y = 0;
+        //int last_y = 0;
         for (String image : images) {
             BufferedImage bi = ImageIO.read(new File(image));
             if (x + bi.getWidth() > result.getWidth()) {
@@ -216,16 +215,11 @@ public class RRDChart {
 
             g.drawImage(bi, x, y, null);
             x += bi.getWidth();
-            last_y += bi.getHeight();
+            //last_y += bi.getHeight();
 
         }
         ImageIO.write(result, "png", new File("result.png"));
 
-    }
-
-    // reports exception by printing it on the stderr device
-    private static void reportException(Exception e) {
-        System.err.println("ERROR [" + new Date() + "]: " + e);
     }
 
 }

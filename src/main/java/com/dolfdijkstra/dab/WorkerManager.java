@@ -1,26 +1,16 @@
 package com.dolfdijkstra.dab;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.http.HttpVersion;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.HttpRequestRetryHandler;
-import org.apache.http.conn.scheme.PlainSocketFactory;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.scheme.SchemeRegistry;
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.SingleClientConnManager;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.http.params.HttpProtocolParams;
-import org.apache.http.protocol.HttpContext;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 
 public class WorkerManager {
     private AtomicInteger counter = new AtomicInteger();
@@ -29,6 +19,7 @@ public class WorkerManager {
     private int workers = 1;
     private int rampup = 0;
     private int runtime = 5;
+    private int startedWorkers = 0;
 
     private BooleanCondition condition;
 
@@ -36,37 +27,29 @@ public class WorkerManager {
 
     private AtomicInteger active = new AtomicInteger();
 
-    private URI uri;
+    private Script script;
     private long interval;
     private long startTime;
     private int verbose;
 
-    HttpClient createClient() {
-        HttpParams params = new BasicHttpParams();
-        params.setParameter(HttpProtocolParams.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-        params.setBooleanParameter(HttpProtocolParams.USE_EXPECT_CONTINUE, false);
-        params.setBooleanParameter(HttpConnectionParams.STALE_CONNECTION_CHECK, false);
-        params.setIntParameter(HttpConnectionParams.SOCKET_BUFFER_SIZE, 8 * 1024);
-        params.setIntParameter(HttpConnectionParams.SO_TIMEOUT, 15000);
+    CloseableHttpClient createClient(HttpClientConnectionManager cm) {
+        org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
+
+        requestConfigBuilder.setStaleConnectionCheckEnabled(false);
+        requestConfigBuilder.setConnectionRequestTimeout(1000); // time to wait for a connection from the pool
+        requestConfigBuilder.setConnectTimeout(1000); // fail fast on a socket connection attempt
+        requestConfigBuilder.setSocketTimeout(15000);
+        RequestConfig requestConfig = requestConfigBuilder.build();
 
         OperatingSystemMXBean o = ManagementFactory.getOperatingSystemMXBean();
-        HttpProtocolParams.setUserAgent(params, "dab/1.0 (" + o.getName() + "; " + o.getVersion() + "; " + o.getArch()
-                + ")");
 
-        SchemeRegistry schemeRegistry = new SchemeRegistry();
-        schemeRegistry.register(new Scheme("http", 80, PlainSocketFactory.getSocketFactory()));
-        schemeRegistry.register(new Scheme("https", 443, SSLSocketFactory.getSocketFactory()));
+        HttpClientBuilder builder = HttpClients.custom().setConnectionManager(cm);
+        builder.disableAutomaticRetries();
+        builder.setDefaultRequestConfig(requestConfig);
 
-        SingleClientConnManager conman = new SingleClientConnManager(schemeRegistry);
-        DefaultHttpClient client = new DefaultHttpClient(conman, params);
+        builder.setUserAgent("dab/1.0 (" + o.getName() + "; " + o.getVersion() + "; " + o.getArch() + ")");
+        CloseableHttpClient client = builder.build();
 
-        client.setHttpRequestRetryHandler(new HttpRequestRetryHandler() {
-
-            public boolean retryRequest(final IOException exception, int executionCount, final HttpContext context) {
-                return false;
-            }
-
-        });
         return client;
     }
 
@@ -77,25 +60,34 @@ public class WorkerManager {
         int pace = workers == 1 ? 0 : (rampup * 1000) / (workers - 1);
         long start = System.currentTimeMillis();
         long end = start + (runtime * 1000L);
-        for (int i = 0; i < workers; i++) {
-            if (i > 0 && pace > 0) {
+        for (startedWorkers = 0; startedWorkers < workers;) {
+            if (startedWorkers > 0 && pace > 0) {
                 Thread.sleep(pace);
             }
-            HttpWorker worker = new HttpWorker(this, createClient(), i);
-            Thread t = new Thread(worker, "HttpWorker-" + i);
+            HttpClientConnectionManager cm = createHttpClientConnectionManager();
+            HttpWorker worker = new HttpWorker(this, createClient(cm), cm, startedWorkers);
+            Thread t = new Thread(worker, "HttpWorker-" + startedWorkers);
             t.start();
-            System.out.println("Started " + t.getName());
+            startedWorkers++;
+            // System.out.println("Started " + t.getName());
 
         }
-        // System.out.println("Started " + (System.currentTimeMillis() -
-        // start));
         while (System.currentTimeMillis() < end) {
             Thread.sleep(250);
         }
         condition.flip();
         latch.await();
-        System.out.println("All workers finished at " + (System.currentTimeMillis() - start));
+        System.out.println("\nAll workers finished at " + (System.currentTimeMillis() - start));
 
+    }
+
+    private HttpClientConnectionManager createHttpClientConnectionManager() {
+        BasicHttpClientConnectionManager conman = new BasicHttpClientConnectionManager();
+
+        //SocketConfig socketConfig = SocketConfig.custom().setSoTimeout(1000).build();
+        //conman.setSocketConfig(socketConfig);
+
+        return conman;
     }
 
     public void startWorker(int id) {
@@ -130,13 +122,6 @@ public class WorkerManager {
     }
 
     /**
-     * @return the uri
-     */
-    public URI getUri() {
-        return uri;
-    }
-
-    /**
      * @return the interval
      */
     public long getInterval() {
@@ -146,42 +131,42 @@ public class WorkerManager {
     /**
      * @return the workers
      */
-    public int getWorkers() {
+    public int getWorkerNumber() {
         return workers;
     }
 
     /**
      * @param workers the workers to set
      */
-    public void setWorkers(int workers) {
+    public void setWorkerNumber(int workers) {
         this.workers = Math.max(0, workers);
     }
 
     /**
      * @return the rampup
      */
-    public int getRampup() {
+    public int getRampupTime() {
         return rampup;
     }
 
     /**
      * @param rampup the rampup to set
      */
-    public void setRampup(int rampup) {
+    public void setRampupTime(int rampup) {
         this.rampup = Math.max(0, rampup);
     }
 
     /**
      * @return the runtime
      */
-    public int getRuntime() {
+    public int getTestRuntime() {
         return runtime;
     }
 
     /**
      * @param runtime the runtime to set
      */
-    public void setRuntime(int runtime) {
+    public void setTestRuntime(int runtime) {
         this.runtime = Math.max(0, runtime);
     }
 
@@ -197,13 +182,6 @@ public class WorkerManager {
      */
     public void setResults(ResultsCollector results) {
         this.results = results;
-    }
-
-    /**
-     * @param uri the uri to set
-     */
-    public void setUri(URI uri) {
-        this.uri = uri;
     }
 
     /**
@@ -230,5 +208,21 @@ public class WorkerManager {
      */
     public int getVerbose() {
         return verbose;
+    }
+
+    public Script getScript() {
+        return script;
+    }
+
+    public void setScript(Script script) {
+        this.script = script;
+
+    }
+
+    /**
+     * @return the startedWorkers
+     */
+    public int getStartedWorkers() {
+        return startedWorkers;
     }
 }
