@@ -21,8 +21,10 @@ public class BooleanCondition implements Condition {
     }
 
     public void flip() {
-        bool.set(false);
-        latch.countDown();
+        if (isValid()) {
+            bool.set(false);
+            latch.countDown();
+        }
     }
 
 }

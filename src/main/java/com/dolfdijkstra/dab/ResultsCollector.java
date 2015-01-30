@@ -1,17 +1,10 @@
 package com.dolfdijkstra.dab;
 
-import java.io.IOException;
-import java.net.URI;
+import java.io.Closeable;
 
-import org.apache.http.client.ClientProtocolException;
 
-public interface ResultsCollector {
+public interface ResultsCollector extends Closeable {
 
-    void exeption(ClientProtocolException e, HttpWorker httpWorker, URI uri);
-
-    void exeption(IOException e, HttpWorker httpWorker, URI uri);
-
-    void collect(Object...results);
-
+    void collect(RequestResult results);
 
 }

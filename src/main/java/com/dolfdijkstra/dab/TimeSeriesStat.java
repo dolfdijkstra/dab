@@ -1,6 +1,6 @@
 package com.dolfdijkstra.dab;
 
-import org.apache.commons.math.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 
 public class TimeSeriesStat {
 

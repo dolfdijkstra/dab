@@ -8,9 +8,11 @@ import org.apache.http.client.methods.HttpUriRequest;
 public class SingleUriScript implements Script {
 
     private final URI uri;
+    private final int waitTime;
 
-    public SingleUriScript(URI uri) {
+    public SingleUriScript(URI uri, int interval) {
         this.uri = uri;
+        this.waitTime = Math.max(0, interval);
     }
 
     @Override
@@ -19,8 +21,8 @@ public class SingleUriScript implements Script {
     }
 
     @Override
-    public String getHost() {
-        return uri.getHost();
+    public long waitTime() {
+        return waitTime;
     }
 
 }

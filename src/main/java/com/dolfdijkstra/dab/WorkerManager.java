@@ -4,7 +4,9 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -13,7 +15,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 
 public class WorkerManager {
-    private AtomicInteger counter = new AtomicInteger();
+
+    private AtomicInteger workerCount = new AtomicInteger();
     private CountDownLatch latch = new CountDownLatch(1);
 
     private int workers = 1;
@@ -28,16 +31,23 @@ public class WorkerManager {
     private AtomicInteger active = new AtomicInteger();
 
     private Script script;
-    private long interval;
     private long startTime;
     private int verbose;
+    private AtomicLong requestCount = new AtomicLong();
+
+    private double targetTPS;
 
     CloseableHttpClient createClient(HttpClientConnectionManager cm) {
-        org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
+        org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = RequestConfig
+                .custom();
 
         requestConfigBuilder.setStaleConnectionCheckEnabled(false);
-        requestConfigBuilder.setConnectionRequestTimeout(1000); // time to wait for a connection from the pool
-        requestConfigBuilder.setConnectTimeout(1000); // fail fast on a socket connection attempt
+        requestConfigBuilder.setConnectionRequestTimeout(1000); // time to wait
+                                                                // for a
+                                                                // connection
+                                                                // from the pool
+        requestConfigBuilder.setConnectTimeout(1000); // fail fast on a socket
+                                                      // connection attempt
         requestConfigBuilder.setSocketTimeout(15000);
         RequestConfig requestConfig = requestConfigBuilder.build();
 
@@ -47,10 +57,10 @@ public class WorkerManager {
         builder.disableAutomaticRetries();
         builder.setDefaultRequestConfig(requestConfig);
 
-        builder.setUserAgent("dab/1.0 (" + o.getName() + "; " + o.getVersion() + "; " + o.getArch() + ")");
-        CloseableHttpClient client = builder.build();
+        builder.setUserAgent("dab/1.0 (" + o.getName() + "; " + o.getVersion()
+                + "; " + o.getArch() + ")");
 
-        return client;
+        return builder.build();
     }
 
     void work() throws Exception {
@@ -60,44 +70,64 @@ public class WorkerManager {
         int pace = workers == 1 ? 0 : (rampup * 1000) / (workers - 1);
         long start = System.currentTimeMillis();
         long end = start + (runtime * 1000L);
-        for (startedWorkers = 0; startedWorkers < workers;) {
+        for (startedWorkers = 0; condition.isValid() && startedWorkers < workers;) {
             if (startedWorkers > 0 && pace > 0) {
-                Thread.sleep(pace);
+                sleep(pace);
             }
-            HttpClientConnectionManager cm = createHttpClientConnectionManager();
-            HttpWorker worker = new HttpWorker(this, createClient(cm), cm, startedWorkers);
-            Thread t = new Thread(worker, "HttpWorker-" + startedWorkers);
-            t.start();
-            startedWorkers++;
-            // System.out.println("Started " + t.getName());
-
+            startWorker();
         }
-        while (System.currentTimeMillis() < end) {
+        long now;
+        long last = System.currentTimeMillis();
+        double[] last_tps = new double[5];
+        int i = 0;
+        while (condition.isValid() && (now = System.currentTimeMillis()) < end) {
             Thread.sleep(250);
+            if (targetTPS > 0 && (now - last >= 1000)) {
+                double tps = requestCount.getAndSet(0) * 1000.0 / (now - last);
+                last_tps[i] = tps;
+                if (StatUtils.max(last_tps) < targetTPS) {
+                    startWorker();
+                }
+                i = (i++) % last_tps.length;
+                last = now;
+            }
         }
         condition.flip();
         latch.await();
-        System.out.println("\nAll workers finished at " + (System.currentTimeMillis() - start));
+        System.out.println("\nAll workers finished at "
+                + (System.currentTimeMillis() - start));
 
     }
 
-    private HttpClientConnectionManager createHttpClientConnectionManager() {
-        BasicHttpClientConnectionManager conman = new BasicHttpClientConnectionManager();
+    protected void startWorker() {
+        HttpClientConnectionManager cm = createHttpClientConnectionManager();
+        HttpWorker worker = new HttpWorker(this, createClient(cm), cm,
+                startedWorkers);
+        Thread t = new Thread(worker);
+        t.setName("HttpWorker-" + startedWorkers);
+        startedWorkers++;
+        t.start();
+    }
 
-        //SocketConfig socketConfig = SocketConfig.custom().setSoTimeout(1000).build();
-        //conman.setSocketConfig(socketConfig);
-
-        return conman;
+    public HttpClientConnectionManager createHttpClientConnectionManager() {
+        return new BasicHttpClientConnectionManager();
     }
 
     public void startWorker(int id) {
-        counter.incrementAndGet();
+        workerCount.incrementAndGet();
 
     }
 
     public void finishWorker(int id) {
-        if (counter.decrementAndGet() == 0)
+        if (workerCount.decrementAndGet() == 0)
             latch.countDown();
+    }
+
+    /**
+     * @return the current number of concurrent downloads
+     */
+    public int getConcurrentRequestsNumber() {
+        return active.get();
     }
 
     /**
@@ -117,15 +147,16 @@ public class WorkerManager {
     /**
      * @return the active
      */
-    public AtomicInteger getActive() {
-        return active;
+    public int startRequest() {
+        requestCount.incrementAndGet();
+        return active.incrementAndGet();
     }
 
     /**
-     * @return the interval
+     * @return the active
      */
-    public long getInterval() {
-        return interval;
+    public int endRequest() {
+        return active.decrementAndGet();
     }
 
     /**
@@ -136,7 +167,8 @@ public class WorkerManager {
     }
 
     /**
-     * @param workers the workers to set
+     * @param workers
+     *            the workers to set
      */
     public void setWorkerNumber(int workers) {
         this.workers = Math.max(0, workers);
@@ -150,7 +182,10 @@ public class WorkerManager {
     }
 
     /**
-     * @param rampup the rampup to set
+     * Start all the works in rampup seconds
+     * 
+     * @param rampup
+     *            the rampup to set
      */
     public void setRampupTime(int rampup) {
         this.rampup = Math.max(0, rampup);
@@ -164,31 +199,27 @@ public class WorkerManager {
     }
 
     /**
-     * @param runtime the runtime to set
+     * @param runtime
+     *            the runtime to set
      */
     public void setTestRuntime(int runtime) {
         this.runtime = Math.max(0, runtime);
     }
 
     /**
-     * @param condition the condition to set
+     * @param condition
+     *            the condition to set
      */
     public void setCondition(BooleanCondition condition) {
         this.condition = condition;
     }
 
     /**
-     * @param results the results to set
+     * @param results
+     *            the results to set
      */
     public void setResults(ResultsCollector results) {
         this.results = results;
-    }
-
-    /**
-     * @param interval the interval to set
-     */
-    public void setInterval(long interval) {
-        this.interval = Math.max(0, interval);
     }
 
     /**
@@ -220,9 +251,44 @@ public class WorkerManager {
     }
 
     /**
-     * @return the startedWorkers
+     * @return the startedWorkers, always increasing number
      */
     public int getStartedWorkers() {
         return startedWorkers;
     }
+
+    /**
+     * @return the target number of transactions per second
+     */
+    public double getTargetTPS() {
+        return targetTPS;
+    }
+
+    /**
+     * Set the target number of transactions per second
+     * 
+     * @param targetTPS
+     */
+    public void setTargetTPS(double targetTPS) {
+        this.targetTPS = targetTPS;
+    }
+
+    public boolean isValid() {
+        return condition.isValid();
+    }
+
+    public void sleep(long interval) throws InterruptedException {
+        condition.sleep(interval);
+    }
+
+    /**
+     * the active number of workers, this number may go up and down when workers
+     * are started and finished
+     * 
+     * @return the active number of workers
+     */
+    public int getWorkerCount() {
+        return workerCount.get();
+    }
+
 }

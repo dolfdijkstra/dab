@@ -3,7 +3,6 @@ package com.dolfdijkstra.dab;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.http.Header;
 import org.apache.http.HttpConnection;
@@ -18,23 +17,16 @@ import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.cookie.BrowserCompatSpec;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpCoreContext;
 import org.apache.http.util.EntityUtils;
 
 public class HttpWorker implements Runnable {
     private final CloseableHttpClient client;
     private final HttpClientConnectionManager connectionManager;
-    private final Condition condition;
 
-    private final ResultsCollector results;
+    private final ResultsCollector collector;
 
     private final int id;
-    private long interval = 0;
     private final WorkerManager manager;
-
-    private AtomicInteger active = new AtomicInteger();
 
     private final boolean verbose;
     private final long startTime;
@@ -44,79 +36,90 @@ public class HttpWorker implements Runnable {
     /**
      * @param manager
      * @param client
-     * @param id identifier
+     * @param conmanager
+     * @param id
      */
     public HttpWorker(final WorkerManager manager, final CloseableHttpClient client,
             HttpClientConnectionManager conmanager, final int id) {
         super();
         this.client = client;
         this.connectionManager = conmanager;
-        this.condition = manager.getCondition();
-        this.results = manager.getResults();
+        this.collector = manager.getResults();
         this.script = manager.getScript();
         this.id = id;
         this.manager = manager;
-        this.interval = manager.getInterval();
-        this.active = manager.getActive();
+
         this.startTime = manager.getStartTime();
         this.verbose = manager.getVerbose() > 5;
     }
 
     @Override
     public void run() {
-        final HttpContext context = createContext();
 
-        manager.startWorker(id);
         boolean stop = false;
         try {
-            while (condition.isValid() && stop == false) {
+            manager.startWorker(id);
+            final HttpClientContext context = createContext();
+            while (manager.isValid() && stop == false) {
 
                 final HttpUriRequest request = script.next();
                 final URI uri = request.getURI();
-                final String url = uri.toASCIIString();
+
                 HttpEntity entity = null;
+                final RequestResult r = new RequestResult();
+                r.url = uri.toASCIIString();
+                r.method = request.getMethod();
+
                 try {
                     final long t = System.nanoTime();
                     final long time = System.currentTimeMillis();
-                    int concurrent = active.incrementAndGet();
+                    int concurrent = manager.startRequest();
+                    r.concurrency = concurrent;
+                    r.time = time;
+                    r.relativeStart = time - startTime;
+                    r.id = id;
+
                     final HttpResponse response = client.execute(request, context);
-                    final HttpRequest req = (HttpRequest) context.getAttribute(HttpCoreContext.HTTP_REQUEST);
-                    final HttpConnection conn = (HttpConnection) context.getAttribute(HttpCoreContext.HTTP_CONNECTION);
+                    r.status = response.getStatusLine().getStatusCode();
+
+                    final HttpRequest req = context.getRequest();
+
+                    final HttpConnection conn = context.getConnection();
+
                     final HttpConnectionMetrics metrics = conn.getMetrics();
 
                     if (verbose) {
                         print(req, response);
                     }
                     entity = response.getEntity();
-                    final long bytes = entityLength(entity);
 
-                    final long sent = metrics.getSentBytesCount();
-                    final long received = metrics.getReceivedBytesCount();
+                    r.length = entityLength(entity);
+                    r.elapsed = (System.nanoTime() - t) / 1000; // in
+                                                                // microseconds
+                    r.sendLength = metrics.getSentBytesCount();
+                    r.receivedLength = metrics.getReceivedBytesCount();
 
-                    final long elapsed = (System.nanoTime() - t) / 1000; // in
-                    // microseconds
-
-                    results.collect(time, (time - startTime), elapsed, response.getStatusLine().getStatusCode(), bytes,
-                            id, concurrent, sent, received, url);
                 } catch (final ClientProtocolException e) {
-                    results.exeption(e, this, uri);
+                    r.exeption = e;
                     request.abort();
-                    stop=true;
+                    stop = true;
                 } catch (final IOException e) {
-                    results.exeption(e, this, uri);
+                    r.exeption = e;
                     request.abort();
-                    stop=true;
+                    stop = true;
                 } finally {
                     try {
                         EntityUtils.consume(entity);
                     } catch (final IOException e) {
                         // ignore
                     }
-                    active.decrementAndGet();
+                    manager.endRequest();
+                    collector.collect(r);
                 }
                 try {
-                    if (interval > 0) {
-                        condition.sleep(interval);
+                    long interval = 0;
+                    if (!stop && (interval = script.waitTime()) > 0) {
+                        manager.sleep(interval);
                     }
                 } catch (final InterruptedException e) {
                     e.printStackTrace();
@@ -130,8 +133,7 @@ public class HttpWorker implements Runnable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            connectionManager.shutdown();// .closeIdleConnections(-5,
-                                         // TimeUnit.SECONDS);
+            connectionManager.shutdown();
         }
 
     }
@@ -169,10 +171,11 @@ public class HttpWorker implements Runnable {
 
     }
 
-    private HttpContext createContext() {
-        final BasicHttpContext context = new BasicHttpContext();
-        final BasicCookieStore store = new BasicCookieStore();
-        context.setAttribute(HttpClientContext.COOKIE_STORE, store);
+    private HttpClientContext createContext() {
+
+        final HttpClientContext context = HttpClientContext.create();
+        context.setCookieStore(new BasicCookieStore());
+
         context.setAttribute(HttpClientContext.COOKIE_SPEC, new BrowserCompatSpec());
         return context;
     }

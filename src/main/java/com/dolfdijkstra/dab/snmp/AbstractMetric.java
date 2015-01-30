@@ -13,6 +13,10 @@ import org.jrobin.graph.TimeAxisUnit;
 import org.snmp4j.PDU;
 import org.snmp4j.smi.VariableBinding;
 
+/**
+ * @author dolf
+ *
+ */
 public abstract class AbstractMetric implements Metric, Grapher {
 
     protected PDU pdu;
@@ -60,7 +64,6 @@ public abstract class AbstractMetric implements Metric, Grapher {
     /**
      * @param startTime
      * @param endTime
-     * @param title
      * @param dimension
      * @param graphDef
      * @return

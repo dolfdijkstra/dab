@@ -9,7 +9,6 @@ public class Dimension {
      * @param height
      */
     public Dimension(int width, int height) {
-        super();
         this.width = width;
         this.height = height;
     }
