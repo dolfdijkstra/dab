@@ -1,1 +1,1 @@
-java -jar target/dab-jar-with-dependencies.jar $@
+java -Xmx32m -Xms16m -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:+UseSerialGC -jar target/dab-app.jar $@

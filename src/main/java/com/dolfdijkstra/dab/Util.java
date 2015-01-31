@@ -4,7 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public class Util {
     public static int toSecs(String s) {

@@ -1,13 +1,15 @@
 package com.dolfdijkstra.dab;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
-import java.util.Formatter;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.math3.stat.Frequency;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
@@ -27,12 +29,18 @@ public class Statistics implements ResultsCollector {
     private final AtomicLong errorCounter = new AtomicLong();
     private final Frequency errors = new Frequency();
 
+    private final MBeanServer mbs;
+    private final ObjectName beanName;
+
     /**
      * @param periods
      *            the expected number of periods that need to be collected
      */
     public Statistics(int periods) {
         this.timeSeriesStat = new TimeSeriesStat(periods);
+        mbs = ManagementFactory.getPlatformMBeanServer();
+        beanName = ManagementFactory.getOperatingSystemMXBean().getObjectName();
+
     }
 
     @Override
@@ -60,31 +68,6 @@ public class Statistics implements ResultsCollector {
 
     public synchronized long getTransactions() {
         return stat.getN();
-    }
-
-    static class StringAppender {
-        private final StringBuilder b = new StringBuilder();
-        private final static String EOL = "\n";
-        private final Formatter f;
-
-        public StringAppender() {
-            f = new Formatter(b, Locale.US);
-        }
-
-        public StringAppender line(String format, Object... args) {
-            f.format(format, args);
-            return line();
-        }
-
-        public StringAppender line() {
-            b.append(EOL);
-            return this;
-        }
-
-        @Override
-        public String toString() {
-            return b.toString();
-        }
     }
 
     public synchronized String createSummary(long start, long end, int verbose) {
@@ -176,6 +159,9 @@ public class Statistics implements ResultsCollector {
         public StatisticalSummary responseTime;
         public StatisticalSummary concurrency;
         public long errors;
+        public double processCpuLoad;
+        public double systemCpuLoad;
+        public double systemLoadAverage;
 
     }
 
@@ -200,11 +186,32 @@ public class Statistics implements ResultsCollector {
         snapshot.errors = diff;
         snapshot.responseTime = a.getSummary();
         snapshot.concurrency = b.getSummary();
+        // when SystemCpuLoad is read in fast succession it reports an incorrect
+        // value.
+        // read once as part of the periodic swap operation.
+        snapshot.systemLoadAverage = loadMetric("SystemLoadAverage");
+        snapshot.systemCpuLoad = loadMetric("SystemCpuLoad") * 100.0;
+        snapshot.processCpuLoad = loadMetric("ProcessCpuLoad") * 100.0;
 
         if (snapshot.responseTime.getN() != snapshot.concurrency.getN())
             throw new IllegalStateException(String.format("stats don't match %s %s",
                     snapshot.responseTime, snapshot.concurrency));
         return snapshot;
+    }
+
+    protected double loadMetric(final String metric) {
+
+        try {
+
+            double load = (double) mbs.getAttribute(beanName, metric);
+            if (load < 0.0) {
+                load = Double.NaN;
+            }
+            return load;
+        } catch (final Exception e) {
+            return Double.NaN;
+        }
+
     }
 
     @Override

@@ -2,7 +2,7 @@ package com.dolfdijkstra.dab;
 
 import java.time.Duration;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public class DurationTest {
 

@@ -10,7 +10,7 @@ import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.time.FastDateFormat;
 
 final class ResponseCollector implements Closeable, ResultsCollector {
 
