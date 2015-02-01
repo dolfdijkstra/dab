@@ -1,10 +1,12 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
 import java.io.Console;
 
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
 
-import com.dolfdijkstra.dab.Statistics.Snapshot;
+import com.dolfdijkstra.dab.DabApp;
+import com.dolfdijkstra.dab.WorkerManager;
+import com.dolfdijkstra.dab.reporting.Statistics.Snapshot;
 
 public final class ConsoleSummary implements PeriodicSummaryCollector {
 

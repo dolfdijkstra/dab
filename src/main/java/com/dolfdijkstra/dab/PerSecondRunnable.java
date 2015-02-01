@@ -1,6 +1,8 @@
 package com.dolfdijkstra.dab;
 
-import com.dolfdijkstra.dab.Statistics.Snapshot;
+import com.dolfdijkstra.dab.reporting.PeriodicSummaryCollector;
+import com.dolfdijkstra.dab.reporting.Statistics;
+import com.dolfdijkstra.dab.reporting.Statistics.Snapshot;
 
 final class PerSecondRunnable implements Runnable {
 

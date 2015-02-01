@@ -1,4 +1,4 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -13,6 +13,9 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.math3.stat.Frequency;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+
+import com.dolfdijkstra.dab.RequestResult;
+import com.dolfdijkstra.dab.ResultsCollector;
 
 public class Statistics implements ResultsCollector {
     private final SummaryStatistics stat = new SummaryStatistics();

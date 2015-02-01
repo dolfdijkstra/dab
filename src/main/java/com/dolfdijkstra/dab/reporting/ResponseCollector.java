@@ -1,4 +1,4 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
 import java.io.Closeable;
 import java.io.File;
@@ -12,7 +12,11 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.lang3.time.FastDateFormat;
 
-final class ResponseCollector implements Closeable, ResultsCollector {
+import com.dolfdijkstra.dab.RequestResult;
+import com.dolfdijkstra.dab.ResultsCollector;
+import com.dolfdijkstra.dab.Util;
+
+public final class ResponseCollector implements Closeable, ResultsCollector {
 
     private AtomicBoolean condition = new AtomicBoolean(true);
     private FastDateFormat df = FastDateFormat

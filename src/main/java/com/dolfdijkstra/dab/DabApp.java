@@ -25,9 +25,16 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import com.dolfdijkstra.dab.reporting.ConsoleSummary;
+import com.dolfdijkstra.dab.reporting.ResponseCollector;
+import com.dolfdijkstra.dab.reporting.Statistics;
+import com.dolfdijkstra.dab.reporting.WriterSummary;
+import com.dolfdijkstra.dab.script.MultipleUriScript;
+import com.dolfdijkstra.dab.script.SingleUriScript;
+
 public class DabApp {
     public static final String FILENAME_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HHmmss";
-    static int availableCores = ManagementFactory.getOperatingSystemMXBean()
+    public static int availableCores = ManagementFactory.getOperatingSystemMXBean()
             .getAvailableProcessors() / 2;
 
     static String toFilename(final String prefix, final Date ts, final String ext) {

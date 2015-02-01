@@ -1,4 +1,4 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.script;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,6 +13,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
+
+import com.dolfdijkstra.dab.Script;
 
 public class FileScript implements Script {
 
@@ -55,7 +57,6 @@ public class FileScript implements Script {
             uris[i].addHeader("Accept",
                     "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             uris[i].addHeader("Accept-Encoding ", "gzip, deflate");
-            uris[i].addHeader("Accept-Language", "en-us");
         }
 
         if (uris.length == 0)
@@ -65,14 +66,11 @@ public class FileScript implements Script {
     }
 
     @Override
-    public HttpUriRequest next() {
+    public ScriptItem next() {
         int j = i.getAndIncrement() % uris.length;
-        return RequestBuilder.copy(uris[j]).build();
+        return new ConstantWaitItem(RequestBuilder.copy(uris[j]).build(), waitTime);
     }
 
-    @Override
-    public long waitTime() {
-        return waitTime;
-    }
+   
 
 }

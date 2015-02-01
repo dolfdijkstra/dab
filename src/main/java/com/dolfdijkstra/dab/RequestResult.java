@@ -9,49 +9,49 @@ public class RequestResult {
     /**
      * timestamp, wall clock
      */
-    long time;
+    public long time;
 
     /**
      * time in ms elapsed since start of program
      */
-    long relativeStart;
+    public long relativeStart;
     /**
      * response time in micro seconds
      */
-    long elapsed;
+    public long elapsed;
     /**
      * 
      */
-    int status;
+    public int status;
     /**
      * 
      */
-    long length;
+    public long length;
     /**
      * 
      */
-    int id;
+    public int id;
     /**
      * 
      */
-    int concurrency;
+    public int concurrency;
     /**
      * 
      */
-    long sendLength;
+    public long sendLength;
     /**
      * 
      */
-    long receivedLength;
+    public long receivedLength;
     /**
      * the URL
      */
-    String url;
+    public String url;
 
     /**
      * 
      */
-    String method;
+    public String method;
 
     public Exception exeption;
 

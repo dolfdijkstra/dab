@@ -1,6 +1,6 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
-import com.dolfdijkstra.dab.Statistics.Snapshot;
+import com.dolfdijkstra.dab.reporting.Statistics.Snapshot;
 
 public interface PeriodicSummaryCollector {
 

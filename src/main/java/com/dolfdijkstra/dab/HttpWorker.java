@@ -19,6 +19,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.cookie.BrowserCompatSpec;
 import org.apache.http.util.EntityUtils;
 
+import com.dolfdijkstra.dab.Script.ScriptItem;
+
 public class HttpWorker implements Runnable {
     private final CloseableHttpClient client;
     private final HttpClientConnectionManager connectionManager;
@@ -61,8 +63,8 @@ public class HttpWorker implements Runnable {
             manager.startWorker(id);
             final HttpClientContext context = createContext();
             while (manager.isValid() && stop == false) {
-
-                final HttpUriRequest request = script.next();
+                ScriptItem item = script.next();
+                final HttpUriRequest request = item.request();
                 final URI uri = request.getURI();
 
                 HttpEntity entity = null;
@@ -118,7 +120,7 @@ public class HttpWorker implements Runnable {
                 }
                 try {
                     long interval = 0;
-                    if (!stop && (interval = script.waitTime()) > 0) {
+                    if (!stop && (interval = item.waitTime()) > 0) {
                         manager.sleep(interval);
                     }
                 } catch (final InterruptedException e) {

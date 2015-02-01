@@ -1,4 +1,4 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,7 +12,7 @@ import javax.management.ObjectName;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
 
-import com.dolfdijkstra.dab.Statistics.Snapshot;
+import com.dolfdijkstra.dab.reporting.Statistics.Snapshot;
 
 public final class WriterSummary implements PeriodicSummaryCollector {
     private final PrintWriter writer;

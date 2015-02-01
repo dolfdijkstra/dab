@@ -1,4 +1,4 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
 import java.util.Formatter;
 import java.util.Locale;

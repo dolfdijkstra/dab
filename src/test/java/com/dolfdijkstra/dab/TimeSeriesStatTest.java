@@ -2,6 +2,8 @@ package com.dolfdijkstra.dab;
 
 import org.junit.Test;
 
+import com.dolfdijkstra.dab.reporting.TimeSeriesStat;
+
 import static org.junit.Assert.assertEquals;
 
 public class TimeSeriesStatTest {

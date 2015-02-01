@@ -1,4 +1,4 @@
-package com.dolfdijkstra.dab;
+package com.dolfdijkstra.dab.reporting;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 
