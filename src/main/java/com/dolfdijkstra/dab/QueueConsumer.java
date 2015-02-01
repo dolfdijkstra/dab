@@ -8,12 +8,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 final class QueueConsumer implements Runnable, ResultsCollector {
 
-    private AtomicBoolean condition = new AtomicBoolean(true);
+    private final AtomicBoolean condition = new AtomicBoolean(true);
 
-    private ResultsCollector delegate;
+    private final ResultsCollector delegate;
     private final BlockingQueue<RequestResult> queue = new LinkedBlockingQueue<RequestResult>();
 
-    public QueueConsumer(ResultsCollector delegate) {
+    public QueueConsumer(final ResultsCollector delegate) {
         this.delegate = delegate;
     }
 
@@ -25,7 +25,7 @@ final class QueueConsumer implements Runnable, ResultsCollector {
                 while ((line = queue.poll(25, TimeUnit.MILLISECONDS)) != null) {
                     delegate.collect(line);
                 }
-            } catch (InterruptedException e) {
+            } catch (final InterruptedException e) {
                 e.printStackTrace();
             }
         }
@@ -33,7 +33,7 @@ final class QueueConsumer implements Runnable, ResultsCollector {
     }
 
     @Override
-    public void collect(RequestResult results) {
+    public void collect(final RequestResult results) {
         queue.add(results);
 
     }

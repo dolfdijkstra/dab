@@ -22,32 +22,32 @@ public class FileScript implements Script {
     private final HttpUriRequest[] uris;
     private final int waitTime;
 
-    public FileScript(File f, int interval) {
-        this.waitTime = interval;
+    public FileScript(final File f, final int interval) {
+        waitTime = interval;
         BufferedReader r = null;
-        LinkedList<URI> list = new LinkedList<URI>();
+        final LinkedList<URI> list = new LinkedList<URI>();
         try {
             r = new BufferedReader(new FileReader(f));
             String s;
             while ((s = r.readLine()) != null) {
                 if (StringUtils.isNotBlank(s)) {
                     try {
-                        URI u = new URI(s);
+                        final URI u = new URI(s);
                         if (StringUtils.isNotBlank(u.getHost())) {
                             list.add(u);
                         }
-                    } catch (URISyntaxException e) {
+                    } catch (final URISyntaxException e) {
                         System.err.println("line '" + s + "' is not a URI");
                     }
                 }
 
             }
-        } catch (IOException e) {
+        } catch (final IOException e) {
             e.printStackTrace();
         } finally {
             try {
                 r.close();
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 e.printStackTrace();
             }
         }
@@ -59,18 +59,17 @@ public class FileScript implements Script {
             uris[i].addHeader("Accept-Encoding ", "gzip, deflate");
         }
 
-        if (uris.length == 0)
+        if (uris.length == 0) {
             throw new IllegalArgumentException("The file" + f.getAbsolutePath()
                     + " does not contain any URIs");
+        }
 
     }
 
     @Override
     public ScriptItem next() {
-        int j = i.getAndIncrement() % uris.length;
+        final int j = i.getAndIncrement() % uris.length;
         return new ConstantWaitItem(RequestBuilder.copy(uris[j]).build(), waitTime);
     }
-
-   
 
 }

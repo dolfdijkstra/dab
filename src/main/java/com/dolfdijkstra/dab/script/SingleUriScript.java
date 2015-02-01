@@ -11,7 +11,7 @@ public class SingleUriScript implements Script {
 
     private final ScriptItem item;
 
-    public SingleUriScript(final URI uri, int interval) {
+    public SingleUriScript(final URI uri, final int interval) {
 
         final int waitTime = Math.max(0, interval);
         item = new ScriptItem() {

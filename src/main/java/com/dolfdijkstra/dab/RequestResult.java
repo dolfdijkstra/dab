@@ -1,6 +1,5 @@
 package com.dolfdijkstra.dab;
 
-
 /**
  * @author dolf
  *
@@ -20,27 +19,27 @@ public class RequestResult {
      */
     public long elapsed;
     /**
-     * 
+     *
      */
     public int status;
     /**
-     * 
+     *
      */
     public long length;
     /**
-     * 
+     *
      */
     public int id;
     /**
-     * 
+     *
      */
     public int concurrency;
     /**
-     * 
+     *
      */
     public long sendLength;
     /**
-     * 
+     *
      */
     public long receivedLength;
     /**
@@ -49,7 +48,7 @@ public class RequestResult {
     public String url;
 
     /**
-     * 
+     *
      */
     public String method;
 

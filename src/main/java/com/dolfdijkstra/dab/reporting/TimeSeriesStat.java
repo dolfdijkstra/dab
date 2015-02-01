@@ -6,27 +6,28 @@ public class TimeSeriesStat {
 
     private SummaryStatistics[] series;
 
-    public TimeSeriesStat(int num) {
+    public TimeSeriesStat(final int num) {
         series = new SummaryStatistics[num];
     }
 
-    public void add(int i, long value) {
+    public void add(final int i, final long value) {
         if (i > series.length - 1) {
             growTo(i + 1);
         }
-        if (series[i] == null)
+        if (series[i] == null) {
             series[i] = new SummaryStatistics();
+        }
         series[i].addValue(value);
     }
 
-    private void growTo(int i) {
-        SummaryStatistics[] copy = new SummaryStatistics[i];
+    private void growTo(final int i) {
+        final SummaryStatistics[] copy = new SummaryStatistics[i];
         System.arraycopy(series, 0, copy, 0, series.length);
         series = copy;
 
     }
 
-    public SummaryStatistics get(int i) {
+    public SummaryStatistics get(final int i) {
         return series[i];
     }
 

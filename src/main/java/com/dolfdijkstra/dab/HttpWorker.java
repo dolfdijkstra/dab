@@ -33,7 +33,7 @@ public class HttpWorker implements Runnable {
     private final boolean verbose;
     private final long startTime;
 
-    private Script script;
+    private final Script script;
 
     /**
      * @param manager
@@ -42,17 +42,17 @@ public class HttpWorker implements Runnable {
      * @param id
      */
     public HttpWorker(final WorkerManager manager, final CloseableHttpClient client,
-            HttpClientConnectionManager conmanager, final int id) {
+            final HttpClientConnectionManager conmanager, final int id) {
         super();
         this.client = client;
-        this.connectionManager = conmanager;
-        this.collector = manager.getCollector();
-        this.script = manager.getScript();
+        connectionManager = conmanager;
+        collector = manager.getCollector();
+        script = manager.getScript();
         this.id = id;
         this.manager = manager;
 
-        this.startTime = manager.getStartTime();
-        this.verbose = manager.getVerbose() > 5;
+        startTime = manager.getStartTime();
+        verbose = manager.getVerbose() > 5;
     }
 
     @Override
@@ -63,7 +63,7 @@ public class HttpWorker implements Runnable {
             manager.startWorker(id);
             final HttpClientContext context = createContext();
             while (manager.isValid() && stop == false) {
-                ScriptItem item = script.next();
+                final ScriptItem item = script.next();
                 final HttpUriRequest request = item.request();
                 final URI uri = request.getURI();
 
@@ -75,7 +75,7 @@ public class HttpWorker implements Runnable {
                 try {
                     final long t = System.nanoTime();
                     final long time = System.currentTimeMillis();
-                    int concurrent = manager.startRequest();
+                    final int concurrent = manager.startRequest();
                     r.concurrency = concurrent;
                     r.time = time;
                     r.relativeStart = time - startTime;
@@ -111,7 +111,7 @@ public class HttpWorker implements Runnable {
                     stop = true;
                 } finally {
                     try {
-                        
+
                         EntityUtils.consume(entity);
                     } catch (final IOException e) {
                         // ignore
@@ -133,7 +133,7 @@ public class HttpWorker implements Runnable {
             manager.finishWorker(id);
             try {
                 client.close();
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 e.printStackTrace();
             }
             connectionManager.shutdown();

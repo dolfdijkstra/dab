@@ -15,14 +15,14 @@ public class MultipleUriScript implements Script {
     private final HttpUriRequest[] uris;
     private final int waitTime;
 
-    public MultipleUriScript(List<URI> s, int interval) {
+    public MultipleUriScript(final List<URI> s, final int interval) {
         uris = s.stream().map(u -> build(u))
                 .toArray(size -> new HttpUriRequest[size]);
         waitTime = Math.max(0, interval);
     }
 
-    protected HttpUriRequest build(URI u) {
-        HttpGet g = new HttpGet(u);
+    protected HttpUriRequest build(final URI u) {
+        final HttpGet g = new HttpGet(u);
         g.addHeader("Accept", accept());
         g.addHeader("Accept-Encoding ", encoding());
 
@@ -40,7 +40,7 @@ public class MultipleUriScript implements Script {
 
     @Override
     public ScriptItem next() {
-        int n = uris.length == 1 ? 0 : ThreadLocalRandom.current().nextInt(
+        final int n = uris.length == 1 ? 0 : ThreadLocalRandom.current().nextInt(
                 uris.length);
         return new ConstantWaitItem(RequestBuilder.copy(uris[n]).build(), waitTime);
     }

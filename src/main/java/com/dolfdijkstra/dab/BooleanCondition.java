@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BooleanCondition implements Condition {
     final AtomicBoolean bool = new AtomicBoolean(true);
-    private CountDownLatch latch = new CountDownLatch(1);
+    private final CountDownLatch latch = new CountDownLatch(1);
 
     @Override
     public boolean isValid() {
@@ -14,9 +14,10 @@ public class BooleanCondition implements Condition {
     }
 
     @Override
-    public void sleep(long interval) throws InterruptedException {
-        if (interval > 0)
+    public void sleep(final long interval) throws InterruptedException {
+        if (interval > 0) {
             latch.await(interval, TimeUnit.MILLISECONDS);
+        }
 
     }
 

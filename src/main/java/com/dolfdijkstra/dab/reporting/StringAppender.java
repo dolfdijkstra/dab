@@ -12,7 +12,7 @@ class StringAppender {
         f = new Formatter(b, Locale.US);
     }
 
-    public StringAppender line(String format, Object... args) {
+    public StringAppender line(final String format, final Object... args) {
         f.format(format, args);
         return line();
     }

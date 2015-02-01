@@ -18,18 +18,18 @@ import com.dolfdijkstra.dab.Util;
 
 public final class ResponseCollector implements Closeable, ResultsCollector {
 
-    private AtomicBoolean condition = new AtomicBoolean(true);
-    private FastDateFormat df = FastDateFormat
+    private final AtomicBoolean condition = new AtomicBoolean(true);
+    private final FastDateFormat df = FastDateFormat
             .getInstance("yyyy-MM-dd'T'HH:mm:ss.S");
     private final PrintWriter writer;
-    private ResultsCollector delegate;
+    private final ResultsCollector delegate;
 
-    public ResponseCollector(File file, ResultsCollector delegate)
+    public ResponseCollector(final File file, final ResultsCollector delegate)
             throws IOException {
         this.delegate = delegate;
 
-        FileOutputStream fos = new FileOutputStream(file);
-        GZIPOutputStream dos = new GZIPOutputStream(fos);
+        final FileOutputStream fos = new FileOutputStream(file);
+        final GZIPOutputStream dos = new GZIPOutputStream(fos);
 
         writer = new PrintWriter(new OutputStreamWriter(dos,
                 Charset.forName("UTF-8")));
@@ -38,8 +38,8 @@ public final class ResponseCollector implements Closeable, ResultsCollector {
 
     }
 
-    private String format(RequestResult result) {
-        StringBuilder b = new StringBuilder(1024);
+    private String format(final RequestResult result) {
+        final StringBuilder b = new StringBuilder(1024);
         b.append(df.format(result.time)).append(',');
         b.append(result.relativeStart).append(',');
         b.append(result.elapsed).append(',');
@@ -57,9 +57,10 @@ public final class ResponseCollector implements Closeable, ResultsCollector {
     }
 
     @Override
-    public void collect(RequestResult results) {
-        if (condition.get())
+    public void collect(final RequestResult results) {
+        if (condition.get()) {
             writer.println(format(results));
+        }
         delegate.collect(results);
     }
 

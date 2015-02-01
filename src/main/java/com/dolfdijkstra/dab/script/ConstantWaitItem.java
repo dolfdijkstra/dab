@@ -9,7 +9,7 @@ public class ConstantWaitItem implements ScriptItem {
     private final long waitTime;
     private final HttpUriRequest request;
 
-    public ConstantWaitItem(final HttpUriRequest request, long waitTime) {
+    public ConstantWaitItem(final HttpUriRequest request, final long waitTime) {
         this.request = request;
         this.waitTime = waitTime;
     }

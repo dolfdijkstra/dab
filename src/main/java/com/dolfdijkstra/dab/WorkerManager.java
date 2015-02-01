@@ -16,8 +16,8 @@ import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 
 public class WorkerManager {
 
-    private AtomicInteger workerCount = new AtomicInteger();
-    private CountDownLatch latch = new CountDownLatch(1);
+    private final AtomicInteger workerCount = new AtomicInteger();
+    private final CountDownLatch latch = new CountDownLatch(1);
 
     private int workers = 1;
     private int rampup = 0;
@@ -28,17 +28,17 @@ public class WorkerManager {
 
     private ResultsCollector collector;
 
-    private AtomicInteger active = new AtomicInteger();
+    private final AtomicInteger active = new AtomicInteger();
 
     private Script script;
     private long startTime;
     private int verbose;
-    private AtomicLong requestCount = new AtomicLong();
+    private final AtomicLong requestCount = new AtomicLong();
 
     private double targetTPS;
 
-    CloseableHttpClient createClient(HttpClientConnectionManager cm) {
-        org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = RequestConfig
+    CloseableHttpClient createClient(final HttpClientConnectionManager cm) {
+        final org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = RequestConfig
                 .custom();
 
         requestConfigBuilder.setStaleConnectionCheckEnabled(false);
@@ -49,11 +49,12 @@ public class WorkerManager {
         requestConfigBuilder.setConnectTimeout(1000); // fail fast on a socket
                                                       // connection attempt
         requestConfigBuilder.setSocketTimeout(15000);
-        RequestConfig requestConfig = requestConfigBuilder.build();
+        final RequestConfig requestConfig = requestConfigBuilder.build();
 
-        OperatingSystemMXBean o = ManagementFactory.getOperatingSystemMXBean();
+        final OperatingSystemMXBean o = ManagementFactory.getOperatingSystemMXBean();
 
-        HttpClientBuilder builder = HttpClients.custom().setConnectionManager(cm);
+        final HttpClientBuilder builder = HttpClients.custom().setConnectionManager(
+                cm);
         builder.disableAutomaticRetries();
         builder.setDefaultRequestConfig(requestConfig);
 
@@ -64,12 +65,12 @@ public class WorkerManager {
     }
 
     void work() throws Exception {
-        this.startTime = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
         condition = new BooleanCondition();
 
-        int pace = workers == 1 ? 0 : (rampup * 1000) / (workers - 1);
-        long start = System.currentTimeMillis();
-        long end = start + (runtime * 1000L);
+        final int pace = workers == 1 ? 0 : rampup * 1000 / (workers - 1);
+        final long start = System.currentTimeMillis();
+        final long end = start + runtime * 1000L;
         for (startedWorkers = 0; condition.isValid() && startedWorkers < workers;) {
             if (startedWorkers > 0 && pace > 0) {
                 sleep(pace);
@@ -78,17 +79,17 @@ public class WorkerManager {
         }
         long now;
         long last = System.currentTimeMillis();
-        double[] last_tps = new double[5];
+        final double[] last_tps = new double[5];
         int i = 0;
         while (condition.isValid() && (now = System.currentTimeMillis()) < end) {
             Thread.sleep(250);
-            if (targetTPS > 0 && (now - last >= 1000)) {
-                double tps = requestCount.getAndSet(0) * 1000.0 / (now - last);
+            if (targetTPS > 0 && now - last >= 1000) {
+                final double tps = requestCount.getAndSet(0) * 1000.0 / (now - last);
                 last_tps[i] = tps;
                 if (StatUtils.max(last_tps) < targetTPS) {
                     startWorker();
                 }
-                i = (i++) % last_tps.length;
+                i = i++ % last_tps.length;
                 last = now;
             }
         }
@@ -100,10 +101,10 @@ public class WorkerManager {
     }
 
     protected void startWorker() {
-        HttpClientConnectionManager cm = createHttpClientConnectionManager();
-        HttpWorker worker = new HttpWorker(this, createClient(cm), cm,
+        final HttpClientConnectionManager cm = createHttpClientConnectionManager();
+        final HttpWorker worker = new HttpWorker(this, createClient(cm), cm,
                 startedWorkers);
-        Thread t = new Thread(worker);
+        final Thread t = new Thread(worker);
         t.setName("HttpWorker-" + startedWorkers);
         startedWorkers++;
         t.start();
@@ -113,14 +114,15 @@ public class WorkerManager {
         return new BasicHttpClientConnectionManager();
     }
 
-    public void startWorker(int id) {
+    public void startWorker(final int id) {
         workerCount.incrementAndGet();
 
     }
 
-    public void finishWorker(int id) {
-        if (workerCount.decrementAndGet() == 0)
+    public void finishWorker(final int id) {
+        if (workerCount.decrementAndGet() == 0) {
             latch.countDown();
+        }
     }
 
     /**
@@ -163,7 +165,7 @@ public class WorkerManager {
      * @param workers
      *            the workers to set
      */
-    public void setWorkerNumber(int workers) {
+    public void setWorkerNumber(final int workers) {
         this.workers = Math.max(0, workers);
     }
 
@@ -176,11 +178,11 @@ public class WorkerManager {
 
     /**
      * Start all the works in rampup seconds
-     * 
+     *
      * @param rampup
      *            the rampup to set
      */
-    public void setRampupTime(int rampup) {
+    public void setRampupTime(final int rampup) {
         this.rampup = Math.max(0, rampup);
     }
 
@@ -195,7 +197,7 @@ public class WorkerManager {
      * @param runtime
      *            the runtime to set
      */
-    public void setTestRuntime(int runtime) {
+    public void setTestRuntime(final int runtime) {
         this.runtime = Math.max(0, runtime);
     }
 
@@ -203,7 +205,7 @@ public class WorkerManager {
      * @param collector
      *            the collector to set
      */
-    public void setCollector(ResultsCollector collector) {
+    public void setCollector(final ResultsCollector collector) {
         this.collector = collector;
     }
 
@@ -214,7 +216,7 @@ public class WorkerManager {
         return startTime;
     }
 
-    public void setVerbose(int verbose) {
+    public void setVerbose(final int verbose) {
         this.verbose = verbose;
 
     }
@@ -230,7 +232,7 @@ public class WorkerManager {
         return script;
     }
 
-    public void setScript(Script script) {
+    public void setScript(final Script script) {
         this.script = script;
 
     }
@@ -251,10 +253,10 @@ public class WorkerManager {
 
     /**
      * Set the target number of transactions per second
-     * 
+     *
      * @param targetTPS
      */
-    public void setTargetTPS(double targetTPS) {
+    public void setTargetTPS(final double targetTPS) {
         this.targetTPS = targetTPS;
     }
 
@@ -262,14 +264,14 @@ public class WorkerManager {
         return condition.isValid();
     }
 
-    public void sleep(long interval) throws InterruptedException {
+    public void sleep(final long interval) throws InterruptedException {
         condition.sleep(interval);
     }
 
     /**
      * the active number of workers, this number may go up and down when workers
      * are started and finished
-     * 
+     *
      * @return the active number of workers
      */
     public int getWorkerCount() {
