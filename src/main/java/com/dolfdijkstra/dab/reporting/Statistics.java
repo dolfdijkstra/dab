@@ -18,8 +18,12 @@ import com.dolfdijkstra.dab.RequestResult;
 import com.dolfdijkstra.dab.ResultsCollector;
 
 public class Statistics implements ResultsCollector {
-    private final SummaryStatistics stat = new SummaryStatistics();
+    private final SummaryStatistics elapsed = new SummaryStatistics();
     private final SummaryStatistics sizeStat = new SummaryStatistics();
+
+    private final SummaryStatistics receivedLengthStat = new SummaryStatistics();
+    private final SummaryStatistics sendLengthStat = new SummaryStatistics();
+
     private final SummaryStatistics concurrency = new SummaryStatistics();
 
     private final Frequency statusFrequency = new Frequency();
@@ -56,7 +60,7 @@ public class Statistics implements ResultsCollector {
         this.elapsedPerSecond.addValue(results.elapsed);
         this.concurrencyPerSecond.addValue(results.concurrency);
 
-        this.stat.addValue(results.elapsed);
+        this.elapsed.addValue(results.elapsed);
         this.concurrency.addValue(results.concurrency);
         Long period = results.relativeStart / 1000L;
         this.timeSeriesStat.add(period.intValue(), results.elapsed);
@@ -64,13 +68,18 @@ public class Statistics implements ResultsCollector {
         this.statusFrequency.addValue(results.status);
         if (results.length > -1)
             this.sizeStat.addValue(results.length);
+        if (results.sendLength > 1)
+            this.sendLengthStat.addValue(results.sendLength);
+        if (results.receivedLength > 1)
+            this.receivedLengthStat.addValue(results.receivedLength);
+
         this.idFrequency.addValue(results.id);
         this.concurrencyFrequency.addValue(results.concurrency);
 
     }
 
     public synchronized long getTransactions() {
-        return stat.getN();
+        return elapsed.getN();
     }
 
     public synchronized String createSummary(long start, long end, int verbose) {
@@ -84,21 +93,30 @@ public class Statistics implements ResultsCollector {
         b.line("Test duration:       %,9d:%02d:%02d (%,d seconds)", d.toHours(),
                 d.toMinutes() % 60, duration - (d.toMinutes() * 60), duration);
 
-        b.line("Number of requests:  %,15d", stat.getN());
+        b.line("Number of requests:  %,15d", elapsed.getN());
         b.line("Errors:              %,15d", errorCounter.get());
-        b.line("Average throughput:  %,15d tps.", stat.getN() / duration);
+        b.line("Average throughput:  %,15d tps.", elapsed.getN() / duration);
         b.line("Average concurrency: %,15.1f", concurrency.getMean());
-        b.line("Peak workers:        %,15.0f", concurrency.getMax());
+        b.line("Min concurrency:     %,15.0f", concurrency.getMin());
+        b.line("Peak concurrency:    %,15.0f", concurrency.getMax());
 
-        b.line("Mean:                %,15.2f μs.", stat.getMean());
-        b.line("Min:                 %,15.0f μs.", stat.getMin());
-        b.line("Max:                 %,15.0f μs.", stat.getMax());
-        b.line("StandardDeviation:   %,15.2f μs.", stat.getStandardDeviation());
+        b.line("Mean:                %,15.2f μs.", elapsed.getMean());
+        b.line("Min:                 %,15.0f μs.", elapsed.getMin());
+        b.line("Max:                 %,15.0f μs.", elapsed.getMax());
+        b.line("StandardDeviation:   %,15.2f μs.", elapsed.getStandardDeviation());
         b.line();
         b.line("Average size:        %,15.0f bytes.", sizeStat.getMean());
         double network = sizeStat.getMean() * sizeStat.getN()
                 / (duration * 1024D * 1024D);
-        b.line("Network Throughput:  %,15.2f Mb/s.", network);
+        double networkSend = sendLengthStat.getMean() * sendLengthStat.getN()
+                / (duration * 1024D * 1024D);
+        double networkReceive = receivedLengthStat.getMean() * receivedLengthStat.getN()
+                / (duration * 1024D * 1024D);
+        
+        
+        //b.line("Network Throughput:  %,15.2f Mb/s.", network);
+        b.line("Network Send:        %,15.2f Mb/s.", networkSend);
+        b.line("Network Receive:     %,15.2f Mb/s.", networkReceive);
 
         b.line();
         b.line("HTTP status");
