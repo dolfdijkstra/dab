@@ -46,7 +46,7 @@ public class HttpWorker implements Runnable {
         super();
         this.client = client;
         this.connectionManager = conmanager;
-        this.collector = manager.getResults();
+        this.collector = manager.getCollector();
         this.script = manager.getScript();
         this.id = id;
         this.manager = manager;
@@ -100,7 +100,7 @@ public class HttpWorker implements Runnable {
                                                                 // microseconds
                     r.sendLength = metrics.getSentBytesCount();
                     r.receivedLength = metrics.getReceivedBytesCount();
-
+                    metrics.reset();
                 } catch (final ClientProtocolException e) {
                     r.exeption = e;
                     request.abort();
@@ -111,6 +111,7 @@ public class HttpWorker implements Runnable {
                     stop = true;
                 } finally {
                     try {
+                        
                         EntityUtils.consume(entity);
                     } catch (final IOException e) {
                         // ignore
