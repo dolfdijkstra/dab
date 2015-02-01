@@ -1,0 +1,1 @@
+java -Xmx1G -Xms64m -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:+UseSerialGC -XX:FlightRecorderOptions=defaultrecording=true,disk=true,maxage=5m,dumponexit=true,dumponexitpath=/tmp/FlightRecordingDump-$(date +'%Y-%m-%d-%H:%M:%S').jfr -jar target/dab-app.jar $@
