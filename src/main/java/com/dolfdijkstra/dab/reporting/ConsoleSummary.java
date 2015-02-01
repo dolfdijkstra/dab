@@ -36,7 +36,7 @@ public final class ConsoleSummary implements PeriodicSummaryCollector {
 
         console.format("\033[5A\r\033[K%-15s: %,9d TPS Errors: %,d%n", "Throughput",
                 tps, snapshot.errors);
-        console.format("\r\033[K%-15s: %,9d TPS/core of %d cores%n", "          ",
+        console.format("\r\033[K%-15s: %,9d TPS/core on %d cores%n", "          ",
                 tps_per_core, DabApp.availableCores);
         console.format("\r\033[K%-15s: %s min: %s max: %s%n", "Response time",
                 format("%,9.0f %s", mean),
