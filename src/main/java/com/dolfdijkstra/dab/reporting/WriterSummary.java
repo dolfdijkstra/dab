@@ -3,11 +3,8 @@ package com.dolfdijkstra.dab.reporting;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.management.ManagementFactory;
 
-import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.math3.stat.descriptive.StatisticalSummary;
@@ -43,9 +40,9 @@ public final class WriterSummary implements PeriodicSummaryCollector {
         final int maxConcurrency = (int) concurrencyStat.getMax();
         final int minConcurrency = (int) concurrencyStat.getMin();
         final double cMean = concurrencyStat.getMean();
-        double load = snapshot.systemLoadAverage;
-        double cpu = snapshot.systemCpuLoad;
-        double proc = snapshot.processCpuLoad;
+        final double load = snapshot.systemLoadAverage;
+        final double cpu = snapshot.systemCpuLoad;
+        final double proc = snapshot.processCpuLoad;
 
         writer.printf("%d,%s,%d,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%.2f,%.2f,%.2f,%.2f%n",
                 i++, df.format(timestamp * 1000), tps, mean, min, max, stddev,
