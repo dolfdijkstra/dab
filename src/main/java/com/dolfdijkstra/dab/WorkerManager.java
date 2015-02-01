@@ -26,7 +26,7 @@ public class WorkerManager {
 
     private BooleanCondition condition;
 
-    private ResultsCollector results;
+    private ResultsCollector collector;
 
     private AtomicInteger active = new AtomicInteger();
 
@@ -59,7 +59,7 @@ public class WorkerManager {
 
         builder.setUserAgent("dab/1.0 (" + o.getName() + "; " + o.getVersion()
                 + "; " + o.getArch() + ")");
-
+        // builder.disableContentCompression();
         return builder.build();
     }
 
@@ -131,17 +131,10 @@ public class WorkerManager {
     }
 
     /**
-     * @return the condition
+     * @return the collector
      */
-    public BooleanCondition getCondition() {
-        return condition;
-    }
-
-    /**
-     * @return the results
-     */
-    public ResultsCollector getResults() {
-        return results;
+    public ResultsCollector getCollector() {
+        return collector;
     }
 
     /**
@@ -207,19 +200,11 @@ public class WorkerManager {
     }
 
     /**
-     * @param condition
-     *            the condition to set
+     * @param collector
+     *            the collector to set
      */
-    public void setCondition(BooleanCondition condition) {
-        this.condition = condition;
-    }
-
-    /**
-     * @param results
-     *            the results to set
-     */
-    public void setResults(ResultsCollector results) {
-        this.results = results;
+    public void setCollector(ResultsCollector collector) {
+        this.collector = collector;
     }
 
     /**
@@ -289,6 +274,11 @@ public class WorkerManager {
      */
     public int getWorkerCount() {
         return workerCount.get();
+    }
+
+    public void stop() {
+        condition.flip();
+
     }
 
 }

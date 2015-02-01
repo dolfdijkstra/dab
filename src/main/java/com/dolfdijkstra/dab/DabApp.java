@@ -34,6 +34,10 @@ import com.dolfdijkstra.dab.script.SingleUriScript;
 
 public class DabApp {
     public static final String FILENAME_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HHmmss";
+    /**
+     * The number of available processor is likely not correct if HyperThreading
+     * is disabled.
+     */
     public static int availableCores = ManagementFactory.getOperatingSystemMXBean()
             .getAvailableProcessors() / 2;
 
@@ -185,7 +189,7 @@ public class DabApp {
 
             @Override
             public void run() {
-                manager.getCondition().flip();
+                manager.stop();
             }
         });
 
@@ -217,7 +221,7 @@ public class DabApp {
             final Thread t = new Thread(queueConsumer, "QueueConsumer");
             t.start();
             try {
-                manager.setResults(collector);
+                manager.setCollector(queueConsumer);
                 console.printf("\r\033[KRamping up...");
                 manager.work();
             } finally {
