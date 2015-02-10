@@ -1,6 +1,7 @@
 package com.dolfdijkstra.dab.script;
 
 import java.net.URI;
+import java.util.Iterator;
 
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -29,8 +30,21 @@ public class SingleUriScript implements Script {
     }
 
     @Override
-    public ScriptItem next() {
-        return item;
+    public Iterator<ScriptItem> iterator() {
+        return new Iterator<Script.ScriptItem>() {
+
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+
+            @Override
+            public ScriptItem next() {
+                return item;
+
+            }
+        };
+
     }
 
 }

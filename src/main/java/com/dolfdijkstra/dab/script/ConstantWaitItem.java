@@ -24,4 +24,10 @@ public class ConstantWaitItem implements ScriptItem {
         return request;
     }
 
+    @Override
+    public String toString() {
+        return "ConstantWaitItem [waitTime=" + waitTime + ", request=" + request
+                + "]";
+    }
+
 }

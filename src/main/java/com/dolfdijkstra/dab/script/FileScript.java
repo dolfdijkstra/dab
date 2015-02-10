@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -67,9 +68,22 @@ public class FileScript implements Script {
     }
 
     @Override
-    public ScriptItem next() {
-        final int j = i.getAndIncrement() % uris.length;
-        return new ConstantWaitItem(RequestBuilder.copy(uris[j]).build(), waitTime);
+    public Iterator<ScriptItem> iterator() {
+        return new Iterator<Script.ScriptItem>() {
+
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+
+            @Override
+            public ScriptItem next() {
+                final int j = i.getAndIncrement() % uris.length;
+                return new ConstantWaitItem(RequestBuilder.copy(uris[j]).build(),
+                        waitTime);
+
+            }
+        };
     }
 
 }

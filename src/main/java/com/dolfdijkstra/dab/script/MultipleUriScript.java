@@ -1,8 +1,9 @@
 package com.dolfdijkstra.dab.script;
 
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -39,10 +40,23 @@ public class MultipleUriScript implements Script {
     }
 
     @Override
-    public ScriptItem next() {
-        final int n = uris.length == 1 ? 0 : ThreadLocalRandom.current().nextInt(
-                uris.length);
-        return new ConstantWaitItem(RequestBuilder.copy(uris[n]).build(), waitTime);
+    public Iterator<ScriptItem> iterator() {
+        return new Iterator<Script.ScriptItem>() {
+            private final Random rnd = new Random();
+
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+
+            @Override
+            public ScriptItem next() {
+                final int n = uris.length == 1 ? 0 : rnd.nextInt(uris.length);
+                return new ConstantWaitItem(RequestBuilder.copy(uris[n]).build(),
+                        waitTime);
+
+            }
+        };
     }
 
 }
