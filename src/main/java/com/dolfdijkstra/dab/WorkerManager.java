@@ -38,8 +38,7 @@ public class WorkerManager {
     private double targetTPS;
 
     CloseableHttpClient createClient(final HttpClientConnectionManager cm) {
-        final org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = RequestConfig
-                .custom();
+        final RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
 
         requestConfigBuilder.setStaleConnectionCheckEnabled(false);
         requestConfigBuilder.setConnectionRequestTimeout(1000); // time to wait
@@ -48,7 +47,8 @@ public class WorkerManager {
                                                                 // from the pool
         requestConfigBuilder.setConnectTimeout(1000); // fail fast on a socket
                                                       // connection attempt
-        requestConfigBuilder.setSocketTimeout(15000);
+        requestConfigBuilder.setSocketTimeout(8000);
+
         final RequestConfig requestConfig = requestConfigBuilder.build();
 
         final OperatingSystemMXBean o = ManagementFactory.getOperatingSystemMXBean();
@@ -61,6 +61,7 @@ public class WorkerManager {
         builder.setUserAgent("dab/1.0 (" + o.getName() + "; " + o.getVersion()
                 + "; " + o.getArch() + ")");
         // builder.disableContentCompression();
+
         return builder.build();
     }
 
@@ -100,12 +101,15 @@ public class WorkerManager {
 
     }
 
+    private final ThreadGroup threadGroup = new ThreadGroup("workers");
+
     protected void startWorker() {
+
         final HttpClientConnectionManager cm = createHttpClientConnectionManager();
         final HttpWorker worker = new HttpWorker(this, createClient(cm), cm,
                 startedWorkers);
-        final Thread t = new Thread(worker);
-        t.setName("HttpWorker-" + startedWorkers);
+        final Thread t = new Thread(threadGroup, worker, String.format(
+                "HttpWorker-%04d", startedWorkers));
         startedWorkers++;
         t.start();
     }
@@ -114,12 +118,12 @@ public class WorkerManager {
         return new BasicHttpClientConnectionManager();
     }
 
-    public void startWorker(final int id) {
+    public void workerStarted(final int id) {
         workerCount.incrementAndGet();
 
     }
 
-    public void finishWorker(final int id) {
+    public void workerFinished(final int id) {
         if (workerCount.decrementAndGet() == 0) {
             latch.countDown();
         }

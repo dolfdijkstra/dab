@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,7 @@ import com.dolfdijkstra.dab.reporting.ResponseCollector;
 import com.dolfdijkstra.dab.reporting.Statistics;
 import com.dolfdijkstra.dab.reporting.WriterSummary;
 import com.dolfdijkstra.dab.script.MultipleUriScript;
+import com.dolfdijkstra.dab.script.NashornScript;
 import com.dolfdijkstra.dab.script.SingleUriScript;
 
 public class DabApp {
@@ -93,29 +95,19 @@ public class DabApp {
 
         @Argument(usage = "set the URIs to download", metaVar = " URI ", multiValued = true, handler = org.kohsuke.args4j.spi.StringArrayOptionHandler.class)
         public void url(final String uri) throws URISyntaxException {
-            urls.add(URI.create(uri));
+            urls.add(new URI(uri));
         }
 
         @Option(name = "--script", usage = "set the URIs to download, read from a file", metaVar = " FILE ")
-        public void urls(final String location) throws IOException,
-                URISyntaxException {
+        public void script(final String location) throws IOException {
             if (new File(location).canRead()) {
-                readFromFile(location);
+                script = location;
             } else {
                 throw new IOException("File '" + location + "' cannot be read");
             }
         }
 
-        private void readFromFile(final String location) throws IOException,
-                URISyntaxException {
-
-            Files.lines(Paths.get(location))
-                    .filter(s -> StringUtils.isNotBlank(s)
-                            && !StringUtils.startsWith(s.trim(), "#"))
-                    .map(s -> URI.create(s))
-                    .filter(u -> StringUtils.isNotBlank(u.getHost()))
-                    .forEach(e -> urls.add(e));
-        }
+        public String script;
 
         public List<URI> urls = new ArrayList<URI>();
 
@@ -173,7 +165,7 @@ public class DabApp {
 
         final WorkerManager manager = new WorkerManager();
 
-        final Script script = createScript(args.urls, args.interval);
+        final Script script = createScript(args);
         manager.setScript(script);
 
         manager.setWorkerNumber(args.workers);
@@ -257,6 +249,29 @@ public class DabApp {
             console.printf("finished%n");
         }
 
+    }
+
+    private static Script createScript(Args args) throws Exception {
+        if (args.script != null) {
+            return readFromFile(args.script, args.interval);
+        }
+        return createScript(args.urls, args.interval);
+    }
+
+    private static Script readFromFile(final String location, int interval)
+            throws Exception {
+        if (location.endsWith(".js")) {
+            return NashornScript.build(location, interval);
+        } else {
+            List<URI> urls = new LinkedList<URI>();
+            Files.lines(Paths.get(location))
+                    .filter(s -> StringUtils.isNotBlank(s)
+                            && !StringUtils.startsWith(s.trim(), "#"))
+                    .map(s -> URI.create(s))
+                    .filter(u -> StringUtils.isNotBlank(u.getHost()))
+                    .forEach(e -> urls.add(e));
+            return createScript(urls, interval);
+        }
     }
 
     private static Script createScript(final List<URI> s, final int interval) {
