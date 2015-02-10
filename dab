@@ -1,1 +1,1 @@
-java -Xmx1G -Xms32m -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:+UseSerialGC -jar target/dab-app.jar $@
+java -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:+UseSerialGC -jar target/dab-app.jar $@
